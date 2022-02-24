@@ -13,7 +13,10 @@ void Solve(string name)
     var dataset = Dataset.Parse($"input/{name}.in.txt");
     var submission = new Submission();
 
-    foreach (var project in dataset.Projects.OrderByDescending(p => p.Score))
+    foreach (var project in dataset.Projects
+        .OrderByDescending(p => p.Score)
+        .ThenBy(p => p.Duration)
+        .ThenBy(p => p.Roles.Count))
     {
         var assignment = new ProjectAssignment();
         assignment.ProjectName = project.Name;
