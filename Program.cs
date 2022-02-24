@@ -1,6 +1,48 @@
-﻿var dataset = Dataset.Parse("input/a_an_example.in.txt");
+﻿using System.Text;
 
-System.Console.WriteLine("Done");
+var names = new[] { "a_an_example", "b_better_start_small", "c_collaboration", "d_dense_schedule", "e_exceptional_skills", "f_find_great_mentors" };
+
+foreach (var name in names)
+{
+    System.Console.WriteLine(name);
+    Solve(name);
+}
+
+void Solve(string name)
+{
+    var dataset = Dataset.Parse($"input/{name}.in.txt");
+    var submission = new Submission();
+
+    foreach (var project in dataset.Projects.OrderByDescending(p => p.Score))
+    {
+        var assignment = new ProjectAssignment();
+        assignment.ProjectName = project.Name;
+        var projectSatisfied = true;
+
+        foreach (var role in project.Roles)
+        {
+            var contributor = dataset.Contributors
+                .FirstOrDefault(c =>
+                    c.Skills.Any(skill => skill.Key == role.Name && skill.Value >= role.Level) &&
+                    assignment.Contributors.Contains(c.Name) == false);
+
+            if (contributor is null)
+            {
+                projectSatisfied = false;
+                break;
+            }
+
+            dataset.Contributors.Remove(contributor);
+            dataset.Contributors.Add(contributor);
+            assignment.Contributors.Add(contributor.Name);
+        }
+
+        if (projectSatisfied)
+            submission.Projects.Add(assignment);
+    }
+
+    submission.Write($"output/{name}.out.txt");
+}
 
 public class Contributor
 {
@@ -14,8 +56,14 @@ public class Project
     public int Duration { get; set; }
     public int Score { get; set; }
     public int Deadline { get; set; }
-    public Dictionary<string, int> Roles { get; set; } = new();
+    public List<Role> Roles { get; set; } = new();
 
+}
+
+public class Role
+{
+    public int Level { get; set; }
+    public string Name { get; set; }
 }
 
 public class Dataset
@@ -86,7 +134,7 @@ public class Dataset
                 var name = roleLine[0];
                 var level = int.Parse(roleLine[1]);
 
-                project.Roles.Add(name, level);
+                project.Roles.Add(new Role { Name = name, Level = level });
             }
 
             i += rolesCount + 1;
@@ -96,4 +144,30 @@ public class Dataset
 
         return new Dataset(contributors, projects);
     }
+}
+
+public class Submission
+{
+    public List<ProjectAssignment> Projects { get; set; } = new();
+
+    public void Write(string path)
+    {
+        var builder = new StringBuilder();
+
+        builder.AppendLine(Projects.Count.ToString());
+
+        foreach (var project in Projects)
+        {
+            builder.AppendLine(project.ProjectName);
+            builder.AppendLine(string.Join(' ', project.Contributors));
+        }
+
+        File.WriteAllText(path, builder.ToString());
+    }
+}
+
+public class ProjectAssignment
+{
+    public string ProjectName { get; set; }
+    public HashSet<string> Contributors { get; set; } = new();
 }
