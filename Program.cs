@@ -27,7 +27,7 @@ void Solve(string name)
             var contributor = dataset.Contributors
                 .FirstOrDefault(c =>
                     c.Skills.Any(skill => skill.Key == role.Name && skill.Value >= role.Level) &&
-                    assignment.Contributors.Contains(c.Name) == false);
+                    assignment.Contributors.Contains(c) == false);
 
             if (contributor is null)
             {
@@ -37,11 +37,24 @@ void Solve(string name)
 
             dataset.Contributors.Remove(contributor);
             dataset.Contributors.Add(contributor);
-            assignment.Contributors.Add(contributor.Name);
+
+            assignment.Contributors.Add(contributor);
+            assignment.ContributorRole[contributor] = role.Name;
         }
 
         if (projectSatisfied)
+        {
             submission.Projects.Add(assignment);
+
+            foreach (var contributor in assignment.Contributors)
+            {
+                var role = project.Roles.First(r => r.Name == assignment.ContributorRole[contributor]);
+                if (role.Level == contributor.Skills[role.Name])
+                {
+                    contributor.Skills[role.Name]++;
+                }
+            }
+        }
     }
 
     submission.Write($"output/{name}.out.txt");
@@ -162,7 +175,7 @@ public class Submission
         foreach (var project in Projects)
         {
             builder.AppendLine(project.ProjectName);
-            builder.AppendLine(string.Join(' ', project.Contributors));
+            builder.AppendLine(string.Join(' ', project.Contributors.Select(c => c.Name)));
         }
 
         File.WriteAllText(path, builder.ToString());
@@ -172,5 +185,6 @@ public class Submission
 public class ProjectAssignment
 {
     public string ProjectName { get; set; }
-    public HashSet<string> Contributors { get; set; } = new();
+    public Dictionary<Contributor, string> ContributorRole { get; set; } = new();
+    public HashSet<Contributor> Contributors { get; set; } = new();
 }
