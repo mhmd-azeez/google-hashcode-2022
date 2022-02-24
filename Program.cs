@@ -22,17 +22,50 @@ void Solve(string name)
         assignment.ProjectName = project.Name;
         var projectSatisfied = true;
 
+        var mentorableSkill = new HashSet<string>();
+
         foreach (var role in project.Roles)
         {
-            var contributor = dataset.Contributors
-                .FirstOrDefault(c =>
-                    c.Skills.Any(skill => skill.Key == role.Name && skill.Value >= role.Level) &&
-                    assignment.Contributors.Contains(c) == false);
+            Contributor? contributor;
+
+            if (mentorableSkill.Contains(role.Name))
+            {
+                contributor = dataset.Contributors
+                                .OrderBy(c => c.Skills.FirstOrDefault(skill => skill.Key == role.Name && skill.Value >= role.Level - 1).Value - role.Level)
+                                .FirstOrDefault(c =>
+                                    c.Skills.Any(skill => skill.Key == role.Name && skill.Value >= role.Level - 1) &&
+                                    assignment.Contributors.Contains(c) == false);
+            }
+            else
+            {
+                contributor = dataset.Contributors
+                                .OrderBy(c => c.Skills.FirstOrDefault(skill => skill.Key == role.Name && skill.Value >= role.Level).Value - role.Level)
+                                .FirstOrDefault(c =>
+                                    c.Skills.Any(skill => skill.Key == role.Name && skill.Value >= role.Level) &&
+                                    assignment.Contributors.Contains(c) == false);
+            }
 
             if (contributor is null)
             {
                 projectSatisfied = false;
                 break;
+            }
+
+            var additionalSkills = contributor.Skills
+                .Where(skill =>
+                {
+                    var role = project.Roles.FirstOrDefault(r => r.Name == skill.Key);
+                    if (role is null) return false;
+
+                    return skill.Value >= role.Level;
+                })
+                .Select(skill => skill.Key)
+                .Where(skill => skill != role.Name)
+                .Except(assignment.ContributorRole.Values);
+
+            foreach (var skill in additionalSkills)
+            {
+                mentorableSkill.Add(skill);
             }
 
             dataset.Contributors.Remove(contributor);
