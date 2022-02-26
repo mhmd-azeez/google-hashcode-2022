@@ -13,7 +13,16 @@ void Solve(string name)
     var dataset = Dataset.Parse($"input/{name}.in.txt");
     var submission = new Submission();
 
+    var threshold = (int)Math.Ceiling(dataset.Projects.Max(p => p.Duration) * 0.70);
+    var commmonSkills = dataset.Projects.SelectMany(r => r.Roles)
+        .GroupBy(r => r.Name)
+        .Select(g => new { Name = g.Key, Count = g.Count() })
+        .OrderByDescending(g => g.Count)
+        .Take(100)
+        .ToHashSet();
+
     foreach (var project in dataset.Projects
+        .Where(p => p.Roles.Any(r => !commmonSkills.Any(s => s.Name == r.Name)))
         .OrderByDescending(p => p.Score)
         .ThenBy(p => p.Duration)
         .ThenBy(p => p.Roles.Count))
